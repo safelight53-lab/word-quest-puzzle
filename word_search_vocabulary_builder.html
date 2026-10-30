@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Quest - Endless Vocabulary Builder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                        },
+                        accent: {
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Styles for Grid Selection */
+        .grid-cell {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+        .grid-cell.selected {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            transform: scale(1.05);
+        }
+        .grid-cell.found {
+            background-color: #10b981 !important;
+            color: white !important;
+            font-weight: bold;
+        }
+        .word-found-strike {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2.5 rounded-xl shadow-md">
+                    <i class="fa-solid font-bold fa-brain text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent leading-none">
+                        Word Quest
+                    </h1>
+                    <p class="text-xs text-slate-500 font-medium mt-0.5">Endless Vocabulary Finder</p>
+                </div>
+            </div>
+
+            <!-- Grade & Category Controls -->
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- Grade Selector -->
+                <div class="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200">
+                    <button id="grade5Btn" onclick="setGrade(5)" class="px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm bg-white text-blue-600">
+                        Grade 5
+                    </button>
+                    <button id="grade9Btn" onclick="setGrade(9)" class="px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-600 rounded-lg transition-all hover:text-slate-900">
+                        Grade 9
+                    </button>
+                </div>
+
+                <!-- Score Display -->
+                <div class="hidden sm:flex items-center space-x-3 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+                    <div class="flex items-center space-x-1.5 text-blue-700 text-xs font-bold">
+                        <i class="fa-solid fa-trophy text-amber-500"></i>
+                        <span>Score: <span id="scoreDisplay">0</span></span>
+                    </div>
+                    <div class="w-px h-4 bg-blue-200"></div>
+                    <div class="flex items-center space-x-1.5 text-purple-700 text-xs font-bold">
+                        <i class="fa-solid fa-fire text-orange-500"></i>
+                        <span>Streak: <span id="streakDisplay">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Controls / Word List Panel -->
+        <div class="lg:col-span-4 flex flex-col space-y-4">
+            
+            <!-- Category & Topic Card -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Subject Category</label>
+                    <span id="gradeBadge" class="text-xs bg-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full">
+                        Grade 5 Level
+                    </span>
+                </div>
+                <select id="categorySelect" onchange="changeCategory()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold">
+                    <option value="all">🌟 All Topics (Mixed)</option>
+                    <option value="science">🔬 Science & Discovery</option>
+                    <option value="literature">📚 Literature & English</option>
+                    <option value="social">🌍 Social Studies & History</option>
+                    <option value="math">📐 Mathematics & Logic</option>
+                </select>
+
+                <div class="flex justify-between items-center pt-1">
+                    <button onclick="generateNewPuzzle()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2 text-sm">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                        <span>New Puzzle (Endless)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Words to Find Panel -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-blue-500"></i> Words to Find 
+                        <span id="foundCount" class="text-xs font-normal text-slate-500">(0/0)</span>
+                    </h2>
+                    <button onclick="useHint()" class="text-xs bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1 transition">
+                        <i class="fa-solid fa-lightbulb text-amber-500"></i> Hint
+                    </button>
+                </div>
+
+                <!-- Word Tags Grid -->
+                <div id="wordList" class="flex flex-wrap gap-2 mb-4">
+                    <!-- Dynamic Word Tags populated by JS -->
+                </div>
+
+                <div class="mt-auto pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
+                    <span>💡 Tip: Click on a word tag to view its definition!</span>
+                </div>
+            </div>
+
+            <!-- Vocabulary Log / Learned Words -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hidden md:block">
+                <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 text-slate-400">
+                    <i class="fa-solid fa-book-bookmark text-indigo-500 mr-1"></i> Discovered Meanings
+                </h3>
+                <div id="discoveredList" class="space-y-2 max-h-40 overflow-y-auto text-xs pr-1">
+                    <p class="text-slate-400 italic">Find words in the grid to reveal their definitions here!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Puzzle Grid Panel -->
+        <div class="lg:col-span-8 flex flex-col items-center justify-center">
+            
+            <div class="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-lg w-full flex flex-col items-center relative overflow-hidden">
+                
+                <!-- Top Status Bar in Grid Card -->
+                <div class="w-full flex justify-between items-center mb-4 px-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="inline-block w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="gridTitle" class="text-sm font-bold text-slate-700">Find the hidden words!</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3 text-xs sm:text-sm font-semibold text-slate-500">
+                        <div class="flex items-center space-x-1">
+                            <i class="fa-regular fa-clock text-blue-500"></i>
+                            <span id="timerDisplay">00:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Canvas / DOM Grid -->
+                <div class="w-full overflow-x-auto flex justify-center py-2">
+                    <div id="gridContainer" class="grid gap-1 bg-slate-100 p-2 sm:p-3 rounded-2xl border border-slate-200 select-none">
+                        <!-- Grid cells inserted dynamically -->
+                    </div>
+                </div>
+
+                <!-- Word Selection Feedback Bar -->
+                <div class="mt-4 h-8 flex items-center justify-center">
+                    <p id="selectionFeedback" class="text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-1 rounded-full border border-blue-100 opacity-0 transition-opacity">
+                        -
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Dictionary Definition Modal -->
+    <div id="wordModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex items-center space-x-2 mb-1">
+                <span id="modalGradeTag" class="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full">Grade 5</span>
+                <span id="modalCategoryTag" class="text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full">Science</span>
+            </div>
+
+            <h3 id="modalWord" class="text-2xl font-black text-slate-800 tracking-tight mb-0.5">Word</h3>
+            <p id="modalPhonetic" class="text-xs font-semibold text-slate-400 mb-3">/phonetic/</p>
+
+            <div class="space-y-3 text-sm">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <span id="modalType" class="text-xs font-bold text-indigo-600 italic block mb-1">noun</span>
+                    <p id="modalDefinition" class="text-slate-700 font-medium leading-relaxed">Word definition goes here.</p>
+                </div>
+
+                <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100/50">
+                    <span class="text-xs font-bold text-blue-700 block mb-1">Example Sentence:</span>
+                    <p id="modalExample" class="text-slate-600 italic">"This is how the word is used in a sentence."</p>
+                </div>
+            </div>
+
+            <button onclick="closeModal()" class="w-full mt-5 bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                Got it, Keep Playing!
+            </button>
+        </div>
+    </div>
+
+    <!-- Puzzle Complete Celebration Overlay -->
+    <div id="victoryModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100">
+            <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
+                <i class="fa-solid fa-crown"></i>
+            </div>
+            <h2 class="text-2xl font-black text-slate-800 mb-1">Puzzle Cleared! 🎉</h2>
+            <p class="text-xs text-slate-500 mb-4">Awesome job! You've mastered all words in this round.</p>
+            
+            <div class="bg-slate-50 p-3 rounded-2xl mb-5 space-y-1.5 text-xs">
+                <div class="flex justify-between font-semibold text-slate-600">
+                    <span>Time Taken:</span>
+                    <span id="victoryTime" class="text-slate-900">01:20</span>
+                </div>
+                <div class="flex justify-between font-semibold text-slate-600">
+                    <span>Bonus Score:</span>
+                    <span id="victoryScore" class="text-emerald-600">+150 pts</span>
+                </div>
+            </div>
+
+            <button onclick="nextEndlessPuzzle()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg transition flex items-center justify-center space-x-2 text-sm">
+                <span>Next Endless Round</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Logic & Word Repository -->
+    <script>
+        /* ------------------------------------------------------------------
+           1. WORD REPOSITORY (Extensible for 5th and 9th Grade Standards)
+           ------------------------------------------------------------------ */
+        const WORD_DATABASE = {
+            5: {
+                science: [
+                    { word: 'FOSSIL', type: 'noun', def: 'The preserved remains or traces of a plant or animal from the past.', ex: 'The scientist discovered a dinosaur fossil embedded in rock.' },
+                    { word: 'GRAVITY', type: 'noun', def: 'The force that pulls objects toward the center of the earth.', ex: 'Gravity causes apples to fall from trees.' },
+                    { word: 'HABITAT', type: 'noun', def: 'The natural home or environment of an animal, plant, or organism.', ex: 'A polar bear\'s habitat is the icy Arctic.' },
+                    { word: 'ECLIPSE', type: 'noun', def: 'An event where one celestial body obscures light from another.', ex: 'We wore special glasses to watch the solar eclipse.' },
+                    { word: 'CLIMATE', type: 'noun', def: 'The general weather conditions of a region over a long period.', ex: 'Rainforests are famous for their tropical climate.' },
+                    { word: 'ENERGY', type: 'noun', def: 'The power or capacity to do work or cause change.', ex: 'Solar panels turn sunlight into clean electrical energy.' },
+                    { word: 'OXYGEN', type: 'noun', def: 'A colorless gas that animals and humans need to breathe.', ex: 'Trees produce oxygen through the process of photosynthesis.' },
+                    { word: 'CIRCUIT', type: 'noun', def: 'A complete path around which electricity can flow.', ex: 'Closing the switch completed the electrical circuit.' }
+                ],
+                literature: [
+                    { word: 'SIMILE', type: 'noun', def: 'A figure of speech comparing two things using "like" or "as".', ex: '"Her smile was as bright as the sun" is a simile.' },
+                    { word: 'STANZA', type: 'noun', def: 'A group of lines forming the basic recurring unit in a poem.', ex: 'The poem consisted of four four-line stanzas.' },
+                    { word: 'PLOT', type: 'noun', def: 'The main events or story structure of a book or movie.', ex: 'The mystery novel featured an exciting plot twist.' },
+                    { word: 'AUTHOR', type: 'noun', def: 'The writer of a book, article, story, or play.', ex: 'J.K. Rowling is the author of the Harry Potter series.' },
+                    { word: 'FABLE', type: 'noun', def: 'A short story, usually featuring animals, conveying a moral lesson.', ex: 'The Tortoise and the Hare is a classic fable.' },
+                    { word: 'HEROINE', type: 'noun', def: 'The chief female character in a story, celebrated for courage.', ex: 'The heroine saved the town from destruction.' }
+                ],
+                social: [
+                    { word: 'COLONY', type: 'noun', def: 'A country or area under the control of another country.', ex: 'Virginia was the first permanent English colony in America.' },
+                    { word: 'DESERT', type: 'noun', def: 'A dry, barren area of land with little water or vegetation.', ex: 'The Sahara is the largest hot desert in the world.' },
+                    { word: 'REGION', type: 'noun', def: 'An area or division of land with distinct characteristics.', ex: 'The Pacific Northwest is a rainy, forested region.' },
+                    { word: 'ISLAND', type: 'noun', def: 'A piece of land completely surrounded by water.', ex: 'Hawaii is a state made entirely of islands.' },
+                    { word: 'BORDER', type: 'noun', def: 'A line separating two political or geographical areas.', ex: 'We crossed the border into Canada during our road trip.' }
+                ],
+                math: [
+                    { word: 'FRACTION', type: 'noun', def: 'A numerical quantity that is not a whole number (e.g., 1/2).', ex: 'She ate three-quarters of the pizza, leaving a small fraction.' },
+                    { word: 'VOLUME', type: 'noun', def: 'The amount of 3D space occupied by a liquid, solid, or gas.', ex: 'We calculated the volume of the box by multiplying width, height, and length.' },
+                    { word: 'POLYGON', type: 'noun', def: 'A plane figure with at least three straight sides and angles.', ex: 'An octagon is an eight-sided polygon.' },
+                    { word: 'FACTOR', type: 'noun', def: 'A number that divides another number evenly.', ex: 'Two and three are factors of six.' },
+                    { word: 'RADIUS', type: 'noun', def: 'A straight line from the center to the circumference of a circle.', ex: 'The circle had a radius of five centimeters.' }
+                ]
+            },
+            9: {
+                science: [
+                    { word: 'CATALYST', type: 'noun', def: 'A substance that speeds up a chemical reaction without undergoing permanent change.', ex: 'Enzymes act as biological catalysts in digestion.' },
+                    { word: 'GENOTYPE', type: 'noun', def: 'The genetic constitution of an individual organism.', ex: 'The plant\'s genotype determined its resistance to disease.' },
+                    { word: 'OSMOSIS', type: 'noun', def: 'Movement of solvent molecules through a membrane into higher solute concentration.', ex: 'Roots absorb water from the soil through osmosis.' },
+                    { word: 'VELOCITY', type: 'noun', def: 'The speed of something in a given direction.', ex: 'The rocket reached escape velocity as it launched into space.' },
+                    { word: 'ISOTOPE', type: 'noun', def: 'Forms of the same element that contain equal numbers of protons but different neutrons.', ex: 'Carbon-14 is a radioactive isotope used in carbon dating.' },
+                    { word: 'PHOTON', type: 'noun', def: 'A particle representing a quantum of light or electromagnetic radiation.', ex: 'Solar cells generate electricity when struck by photons.' }
+                ],
+                literature: [
+                    { word: 'METAPHOR', type: 'noun', def: 'A direct comparison between two unlike things without using "like" or "as".', ex: '"Time is a thief" is a powerful metaphor.' },
+                    { word: 'ALLUSION', type: 'noun', def: 'An indirect or passing reference to an event, person, or literary work.', ex: 'He made an allusion to Shakespeare in his speech.' },
+                    { word: 'SOLILOQUY', type: 'noun', def: 'A speech in a play where a character speaks their thoughts aloud alone.', ex: 'Hamlet\'s "To be or not to be" is a famous soliloquy.' },
+                    { word: 'IRONY', type: 'noun', def: 'An expression of meaning using language that signifies the opposite for humor or emphasis.', ex: 'The fire station burning down is a classic example of situational irony.' },
+                    { word: 'RHETORIC', type: 'noun', def: 'The art of effective or persuasive speaking or writing.', ex: 'The politician was praised for her compelling rhetoric.' }
+                ],
+                social: [
+                    { word: 'AUTONOMY', type: 'noun', def: 'The right or condition of self-government.', ex: 'The region sought political autonomy from the central government.' },
+                    { word: 'EMBARGO', type: 'noun', def: 'An official ban on trade or commercial activity with a particular country.', ex: 'The nation placed an embargo on oil exports.' },
+                    { word: 'MONARCHY', type: 'noun', def: 'A form of government with a monarch (king or queen) at the head.', ex: 'The kingdom transitioned from an absolute monarchy to a constitutional one.' },
+                    { word: 'CENSUS', type: 'noun', def: 'An official count or survey of a population.', ex: 'The national census is conducted every ten years.' },
+                    { word: 'DIASPORA', type: 'noun', def: 'The dispersion of any people from their original homeland.', ex: 'The cultural festival celebrated the global diaspora.' }
+                ],
+                math: [
+                    { word: 'PARABOLA', type: 'noun', def: 'A symmetrical open plane curve formed by the intersection of a cone with a plane.', ex: 'The path of a thrown basketball forms a parabola.' },
+                    { word: 'ASYMPTOTE', type: 'noun', def: 'A line that a curve approaches continuously but never quite touches.', ex: 'The graph approaches the vertical asymptote at x = 0.' },
+                    { word: 'THEOREM', type: 'noun', def: 'A general proposition proven by a chain of reasoning.', ex: 'We applied the Pythagorean theorem to find the hypotenuse.' },
+                    { word: 'EXPONENT', type: 'noun', def: 'A quantity representing the power to which a base number is raised.', ex: 'In 2 to the 3rd power, three is the exponent.' },
+                    { word: 'MATRIX', type: 'noun', def: 'A rectangular array of numbers arranged in rows and columns.', ex: 'We solved the system of equations using matrix multiplication.' }
+                ]
+            }
+        };
+
+        /* ------------------------------------------------------------------
+           2. STATE & GAME VARIABLES
+           ------------------------------------------------------------------ */
+        let currentGrade = 5;
+        let currentCategory = 'all';
+        let gridRows = 10;
+        let gridCols = 10;
+        let gridMatrix = [];
+        let wordLocations = []; // { word, startR, startC, dirR, dirC, cells: [{r,c}] }
+        let currentLevelWords = [];
+        let foundWords = new Set();
+        
+        let score = 0;
+        let streak = 0;
+        let timerSeconds = 0;
+        let timerInterval = null;
+
+        // Interaction state
+        let isSelecting = false;
+        let selectedCells = []; // [{r, c}]
+
+        /* ------------------------------------------------------------------
+           3. INITIALIZATION & LISTENERS
+           ------------------------------------------------------------------ */
+        window.onload = () => {
+            generateNewPuzzle();
+            
+            // Global Mouse Up / Touch End for Selection Release
+            window.addEventListener('mouseup', handlePointerEnd);
+            window.addEventListener('touchend', handlePointerEnd);
+        };
+
+        function setGrade(grade) {
+            if (currentGrade === grade) return;
+            currentGrade = grade;
+            
+            // UI Toggle
+            document.getElementById('grade5Btn').className = grade === 5 
+                ? 'px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm bg-white text-blue-600' 
+                : 'px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-600 rounded-lg transition-all hover:text-slate-900';
+            
+            document.getElementById('grade9Btn').className = grade === 9 
+                ? 'px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-all shadow-sm bg-white text-blue-600' 
+                : 'px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-600 rounded-lg transition-all hover:text-slate-900';
+
+            document.getElementById('gradeBadge').innerText = `Grade ${grade} Level`;
+
+            // Adjust Grid Dimension based on grade difficulty
+            gridRows = grade === 5 ? 10 : 12;
+            gridCols = grade === 5 ? 10 : 12;
+
+            generateNewPuzzle();
+        }
+
+        function changeCategory() {
+            currentCategory = document.getElementById('categorySelect').value;
+            generateNewPuzzle();
+        }
+
+        /* ------------------------------------------------------------------
+           4. PUZZLE GENERATION LOGIC
+           ------------------------------------------------------------------ */
+        function generateNewPuzzle() {
+            // Reset States
+            foundWords.clear();
+            selectedCells = [];
+            wordLocations = [];
+            resetTimer();
+
+            // Select Words based on Grade & Category
+            let pool = [];
+            const gradeData = WORD_DATABASE[currentGrade];
+
+            if (currentCategory === 'all') {
+                Object.values(gradeData).forEach(catList => pool.push(...catList));
+            } else if (gradeData[currentCategory]) {
+                pool = [...gradeData[currentCategory]];
+            }
+
+            // Shuffle & pick 6-8 words
+            pool.sort(() => 0.5 - Math.random());
+            const targetCount = currentGrade === 5 ? 6 : 8;
+            currentLevelWords = pool.slice(0, targetCount);
+
+            // Initialize Grid with empty strings
+            gridMatrix = Array(gridRows).fill(null).map(() => Array(gridCols).fill(''));
+
+            // Directions: East, South, SouthEast, NorthEast (and reverse for Grade 9)
+            let directions = [
+                [0, 1],   // Right
+                [1, 0],   // Down
+                [1, 1],   // Down-Right
+                [-1, 1]   // Up-Right
+            ];
+
+            if (currentGrade === 9) {
+                directions.push([0, -1], [-1, 0]); // Left, Up
+            }
+
+            // Place each word into grid
+            currentLevelWords.forEach(wordObj => {
+                const word = wordObj.word;
+                let placed = false;
+                let attempts = 0;
+
+                while (!placed && attempts < 150) {
+                    attempts++;
+                    const dir = directions[Math.floor(Math.random() * directions.length)];
+                    const startR = Math.floor(Math.random() * gridRows);
+                    const startC = Math.floor(Math.random() * gridCols);
+
+                    if (canPlaceWord(word, startR, startC, dir[0], dir[1])) {
+                        const cells = [];
+                        for (let i = 0; i < word.length; i++) {
+                            const r = startR + i * dir[0];
+                            const c = startC + i * dir[1];
+                            gridMatrix[r][c] = word[i];
+                            cells.push({ r, c });
+                        }
+                        wordLocations.push({
+                            wordObj,
+                            word: word,
+                            cells: cells,
+                            found: false
+                        });
+                        placed = true;
+                    }
+                }
+            });
+
+            // Fill empty cells with random letters
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            for (let r = 0; r < gridRows; r++) {
+                for (let c = 0; c < gridCols; c++) {
+                    if (gridMatrix[r][c] === '') {
+                        gridMatrix[r][c] = letters.charAt(Math.floor(Math.random() * letters.length));
+                    }
+                }
+            }
+
+            // Render DOM Grid & Word List
+            renderGrid();
+            renderWordList();
+            updateProgressUI();
+            startTimer();
+        }
+
+        function canPlaceWord(word, r, c, dr, dc) {
+            for (let i = 0; i < word.length; i++) {
+                const nr = r + i * dr;
+                const nc = c + i * dc;
+
+                if (nr < 0 || nr >= gridRows || nc < 0 || nc >= gridCols) {
+                    return false;
+                }
+                if (gridMatrix[nr][nc] !== '' && gridMatrix[nr][nc] !== word[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /* ------------------------------------------------------------------
+           5. RENDERING LOGIC
+           ------------------------------------------------------------------ */
+        function renderGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+            container.style.gridTemplateColumns = `repeat(${gridCols}, minmax(0, 1fr))`;
+
+            for (let r = 0; r < gridRows; r++) {
+                for (let c = 0; c < gridCols; c++) {
+                    const cell = document.createElement('div');
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    cell.innerText = gridMatrix[r][c];
+                    
+                    // Sizing classes based on grid size
+                    const sizeClass = gridCols > 10 
+                        ? 'w-7 h-7 sm:w-9 sm:h-9 text-xs sm:text-sm' 
+                        : 'w-8 h-8 sm:w-10 sm:h-10 text-sm sm:text-base';
+
+                    cell.className = `grid-cell ${sizeClass} flex items-center justify-center font-bold text-slate-700 bg-white rounded-lg shadow-sm border border-slate-200/60 cursor-pointer select-none transition-all`;
+
+                    // Event Listeners for Touch/Mouse Drag Selection
+                    cell.addEventListener('mousedown', (e) => handlePointerStart(r, c, e));
+                    cell.addEventListener('mouseenter', () => handlePointerEnter(r, c));
+                    cell.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        handlePointerStart(r, c, e);
+                    });
+                    cell.addEventListener('touchmove', (e) => handleTouchMove(e));
+
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function renderWordList() {
+            const wordListEl = document.getElementById('wordList');
+            wordListEl.innerHTML = '';
+
+            currentLevelWords.forEach(item => {
+                const isFound = foundWords.has(item.word);
+                const tag = document.createElement('button');
+                tag.id = `word-tag-${item.word}`;
+                tag.onclick = () => openWordModal(item);
+
+                tag.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
+                    isFound 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 line-through opacity-70' 
+                        : 'bg-slate-100 hover:bg-blue-50 text-slate-700 border-slate-200'
+                }`;
+
+                tag.innerHTML = `
+                    <span>${item.word}</span>
+                    <i class="fa-solid fa-circle-info text-[10px] text-slate-400 hover:text-blue-500"></i>
+                `;
+                wordListEl.appendChild(tag);
+            });
+        }
+
+        function updateProgressUI() {
+            document.getElementById('foundCount').innerText = `(${foundWords.size}/${currentLevelWords.length})`;
+            document.getElementById('scoreDisplay').innerText = score;
+            document.getElementById('streakDisplay').innerText = streak;
+        }
+
+        /* ------------------------------------------------------------------
+           6. SELECTION & INTERACTION LOGIC
+           ------------------------------------------------------------------ */
+        function handlePointerStart(r, c, e) {
+            isSelecting = true;
+            selectedCells = [{ r, c }];
+            highlightCells();
+        }
+
+        function handlePointerEnter(r, c) {
+            if (!isSelecting) return;
+            
+            const start = selectedCells[0];
+            // Calculate direction vector
+            const dr = r - start.r;
+            const dc = c - start.c;
+
+            // Check if movement is straight or diagonal
+            if (dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc)) {
+                const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+                const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+
+                const count = Math.max(Math.abs(dr), Math.abs(dc));
+                selectedCells = [];
+
+                for (let i = 0; i <= count; i++) {
+                    selectedCells.push({
+                        r: start.r + i * stepR,
+                        c: start.c + i * stepC
+                    });
+                }
+                highlightCells();
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (!isSelecting) return;
+            const touch = e.touches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            if (target && target.dataset.row !== undefined) {
+                const r = parseInt(target.dataset.row);
+                const c = parseInt(target.dataset.col);
+                handlePointerEnter(r, c);
+            }
+        }
+
+        function handlePointerEnd() {
+            if (!isSelecting) return;
+            isSelecting = false;
+
+            // Check selection against target words
+            checkSelectedWord();
+            clearHighlights();
+        }
+
+        function highlightCells() {
+            // First clear temporary selections
+            document.querySelectorAll('.grid-cell').forEach(el => {
+                if (!el.classList.contains('found')) {
+                    el.classList.remove('selected');
+                }
+            });
+
+            // Highlight current path
+            let currentStr = '';
+            selectedCells.forEach(cell => {
+                const el = document.querySelector(`[data-row="${cell.r}"][data-col="${cell.c}"]`);
+                if (el && !el.classList.contains('found')) {
+                    el.classList.add('selected');
+                }
+                currentStr += gridMatrix[cell.r][cell.c];
+            });
+
+            // Update Feedback Bar
+            const feedback = document.getElementById('selectionFeedback');
+            if (currentStr.length > 0) {
+                feedback.innerText = currentStr;
+                feedback.classList.remove('opacity-0');
+            } else {
+                feedback.classList.add('opacity-0');
+            }
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.grid-cell').forEach(el => el.classList.remove('selected'));
+            document.getElementById('selectionFeedback').classList.add('opacity-0');
+        }
+
+        function checkSelectedWord() {
+            const selectedStr = selectedCells.map(cell => gridMatrix[cell.r][cell.c]).join('');
+            const reversedStr = selectedStr.split('').reverse().join('');
+
+            wordLocations.forEach(item => {
+                if (!item.found && (item.word === selectedStr || item.word === reversedStr)) {
+                    // Word Matched!
+                    item.found = true;
+                    foundWords.add(item.word);
+
+                    // Mark cells as found
+                    item.cells.forEach(cell => {
+                        const el = document.querySelector(`[data-row="${cell.r}"][data-col="${cell.c}"]`);
+                        if (el) {
+                            el.classList.remove('selected');
+                            el.classList.add('found');
+                        }
+                    });
+
+                    // Scoring
+                    score += item.word.length * 10;
+                    streak += 1;
+                    updateProgressUI();
+
+                    // Update tag & show modal automatically
+                    renderWordList();
+                    addDiscoveredLog(item.wordObj);
+                    openWordModal(item.wordObj);
+
+                    // Check for Level Completion
+                    if (foundWords.size === currentLevelWords.length) {
+                        setTimeout(triggerVictory, 600);
+                    }
+                }
+            });
+        }
+
+        /* ------------------------------------------------------------------
+           7. HINTS & DICTIONARY MODALS
+           ------------------------------------------------------------------ */
+        function useHint() {
+            const uncollected = wordLocations.filter(w => !w.found);
+            if (uncollected.length === 0) return;
+
+            const target = uncollected[Math.floor(Math.random() * uncollected.length)];
+            const firstCell = target.cells[0];
+            const el = document.querySelector(`[data-row="${firstCell.r}"][data-col="${firstCell.c}"]`);
+
+            if (el) {
+                el.classList.add('animate-bounce', 'bg-amber-400');
+                setTimeout(() => {
+                    el.classList.remove('animate-bounce', 'bg-amber-400');
+                }, 2000);
+            }
+        }
+
+        function openWordModal(wordObj) {
+            document.getElementById('modalGradeTag').innerText = `Grade ${currentGrade}`;
+            document.getElementById('modalCategoryTag').innerText = currentCategory.toUpperCase();
+            document.getElementById('modalWord').innerText = wordObj.word;
+            document.getElementById('modalPhonetic').innerText = `/${wordObj.word.toLowerCase()}/`;
+            document.getElementById('modalType').innerText = wordObj.type;
+            document.getElementById('modalDefinition').innerText = wordObj.def;
+            document.getElementById('modalExample').innerText = `"${wordObj.ex}"`;
+
+            document.getElementById('wordModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('wordModal').classList.add('hidden');
+        }
+
+        function addDiscoveredLog(wordObj) {
+            const list = document.getElementById('discoveredList');
+            if (list.querySelector('p')) {
+                list.innerHTML = ''; // Clear default prompt text
+            }
+
+            // Prevent Duplicate
+            if (document.getElementById(`log-${wordObj.word}`)) return;
+
+            const card = document.createElement('div');
+            card.id = `log-${wordObj.word}`;
+            card.className = 'bg-slate-50 p-2 rounded-xl border border-slate-100 flex justify-between items-center';
+            card.innerHTML = `
+                <div>
+                    <span class="font-bold text-slate-800">${wordObj.word}</span>
+                    <p class="text-[11px] text-slate-500 truncate max-w-[200px]">${wordObj.def}</p>
+                </div>
+                <button onclick='openWordModal(${JSON.stringify(wordObj)})' class="text-blue-600 hover:text-blue-800 font-bold px-1.5 py-0.5 text-[10px] bg-blue-50 rounded">
+                    View
+                </button>
+            `;
+            list.prepend(card);
+        }
+
+        /* ------------------------------------------------------------------
+           8. TIMER & VICTORY LOGIC
+           ------------------------------------------------------------------ */
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerSeconds = 0;
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+                const secs = String(timerSeconds % 60).padStart(2, '0');
+                document.getElementById('timerDisplay').innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('timerDisplay').innerText = '00:00';
+        }
+
+        function triggerVictory() {
+            clearInterval(timerInterval);
+            const timeStr = document.getElementById('timerDisplay').innerText;
+            const timeBonus = Math.max(50, 200 - timerSeconds);
+            score += timeBonus;
+            updateProgressUI();
+
+            document.getElementById('victoryTime').innerText = timeStr;
+            document.getElementById('victoryScore').innerText = `+${timeBonus} pts`;
+            document.getElementById('victoryModal').classList.remove('hidden');
+        }
+
+        function nextEndlessPuzzle() {
+            document.getElementById('victoryModal').classList.add('hidden');
+            generateNewPuzzle();
+        }
+    </script>
+</body>
+</html>
